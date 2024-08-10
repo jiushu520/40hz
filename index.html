@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玖数天籁</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        #volumeValue {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: normal;
+        }
+
+        @media (min-width: 768px) {
+            input, select, button {
+                width: 50%;
+                margin: 10px auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>玖数天籁</h1>
+    
+    <label for="frequencyInput">频率 (Hz): </label>
+    <input type="number" id="frequencyInput" value="40" min="20" max="1000" step="1" onchange="updateFrequency(this.value)">
+    
+    <label for="waveformSelect">波形: </label>
+    <select id="waveformSelect" onchange="updateWaveform(this.value)">
+        <option value="triangle">Triangle</option>
+        <option value="sine">Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Sawtooth</option>
+    </select>
+    
+    <label for="volumeSlider">音量: <span id="volumeValue">0.5</span></label>
+    <input type="range" id="volumeSlider" min="0" max="1" value="0.5" step="0.01" onchange="updateVolume(this.value)">
+    
+    <label for="durationInput">音长 (秒): </label>
+    <input type="number" id="durationInput" value="300" min="1" max="6000" step="1">
+    
+    <button onclick="startAudio()">播放</button>
+    <button onclick="startAudioIndefinitely()">连续播放</button>
+    <button onclick="stopAudio()">停止</button>
+
+    <script>
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let durationTimeout;
+
+        window.onload = function() {
+            startAudioIndefinitely();  // 页面加载时自动播放
+        };
+
+        function startAudio() {
+            stopAudio(); // Stop any existing audio
+            clearTimeout(durationTimeout);
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            oscillator = audioContext.createOscillator();
+            oscillator.type = document.getElementById('waveformSelect').value;
+            oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
+
+            gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+
+            const duration = parseFloat(document.getElementById('durationInput').value);
+            durationTimeout = setTimeout(() => stopAudio(), duration * 1000);
+        }
+
+        function startAudioIndefinitely() {
+            stopAudio(); // Stop any existing audio
+            clearTimeout(durationTimeout);
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            oscillator = audioContext.createOscillator();
+            oscillator.type = document.getElementById('waveformSelect').value;
+            oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
+
+            gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            // 不设置超时，以永久播放，直到手动停止
+        }
+
+        function stopAudio() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator.disconnect();
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            clearTimeout(durationTimeout);
+        }
+
+        function updateFrequency(value) {
+            if (oscillator) {
+                oscillator.frequency.setValueAtTime(value, audioContext.currentTime);
+            }
+        }
+
+        function updateVolume(value) {
+            if (gainNode) {
+                gainNode.gain.setValueAtTime(value, audioContext.currentTime);
+            }
+            document.getElementById("volumeValue").innerText = value;
+        }
+
+        function updateWaveform(value) {
+            if (oscillator) {
+                oscillator.type = value;
+            }
+        }
+    </script>
+</body>
+</html>
