@@ -11,6 +11,13 @@
             margin: 0;
             background-color: #f5f5f5;
             color: #333;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
         }
 
         h1 {
@@ -55,45 +62,57 @@
             font-weight: normal;
         }
 
-        @media (min-width: 768px) {
-            input, select, button {
-                width: 50%;
-                margin: 10px auto;
-            }
+        canvas {
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: 200px;
         }
     </style>
 </head>
 <body>
-    <h1>玖数天籁</h1>
-    
-    <label for="frequencyInput">频率 (Hz): </label>
-    <input type="number" id="frequencyInput" value="40" min="20" max="1000" step="1" onchange="updateFrequency(this.value)">
-    
-    <label for="waveformSelect">波形: </label>
-    <select id="waveformSelect" onchange="updateWaveform(this.value)">
-        <option value="triangle">Triangle</option>
-        <option value="sine">Sine</option>
-        <option value="square">Square</option>
-        <option value="sawtooth">Sawtooth</option>
-    </select>
-    
-    <label for="volumeSlider">音量: <span id="volumeValue">0.5</span></label>
-    <input type="range" id="volumeSlider" min="0" max="1" value="0.5" step="0.01" onchange="updateVolume(this.value)">
-    
-    <label for="durationInput">音长 (秒): </label>
-    <input type="number" id="durationInput" value="300" min="1" max="6000" step="1">
-    
-    <button onclick="startAudio()">播放</button>
-    <button onclick="startAudioIndefinitely()">连续播放</button>
-    <button onclick="stopAudio()">停止</button>
+    <div class="container">
+        <h1>玖数天籁</h1>
+        
+        <label for="frequencyInput">频率 (Hz): </label>
+        <input type="number" id="frequencyInput" value="40" min="20" max="1000" step="1" onchange="updateFrequency(this.value)">
+        
+        <label for="waveformSelect">波形: </label>
+        <select id="waveformSelect" onchange="updateWaveform(this.value)">
+            <option value="sine">Sine</option>
+            <option value="triangle">Triangle</option>
+            <option value="square">Square</option>
+            <option value="sawtooth">Sawtooth</option>
+            <option value="pulse">Pulse</option>
+            <option value="noise">Noise</option>
+            <option value="ramp">Ramp</option>
+        </select>
+        
+        <label for="volumeSlider">音量: <span id="volumeValue">0.5</span></label>
+        <input type="range" id="volumeSlider" min="0" max="1" value="0.5" step="0.01" onchange="updateVolume(this.value)">
+        <canvas id="oscilloscope"></canvas>
+        
+        <label for="durationInput">音长 (秒): </label>
+        <input type="number" id="durationInput" value="300" min="1" max="6000" step="1">
+        
+        <button onclick="startAudio()">播放</button>
+        <button onclick="startAudioIndefinitely()">连续播放</button>
+        <button onclick="stopAudio()">停止</button>
+    </div>
 
     <script>
         let audioContext;
         let oscillator;
         let gainNode;
+        let analyser;
         let durationTimeout;
+        let canvas, canvasContext;
+        let animationId;
 
         window.onload = function() {
+            canvas = document.getElementById('oscilloscope');
+            canvasContext = canvas.getContext('2d');
             startAudioIndefinitely();  // 页面加载时自动播放
         };
 
@@ -102,21 +121,65 @@
             clearTimeout(durationTimeout);
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
 
-            oscillator = audioContext.createOscillator();
-            oscillator.type = document.getElementById('waveformSelect').value;
-            oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
+            const waveform = document.getElementById('waveformSelect').value;
+
+            if (waveform === 'noise') {
+                generateNoise();
+            } else {
+                oscillator = audioContext.createOscillator();
+                oscillator.type = waveform === 'pulse' ? 'square' : waveform;
+                oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
+
+                gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+
+                if (waveform === 'pulse') {
+                    // Handle Pulse wave (square wave with adjustable duty cycle)
+                    const pulseWidth = 0.5; // This can be adjusted or made dynamic
+                    oscillator.type = 'square';
+                    gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value) * pulseWidth, audioContext.currentTime);
+                } else if (waveform === 'ramp') {
+                    oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
+                }
+
+                oscillator.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioContext.destination);
+
+                oscillator.start();
+            }
+
+            const duration = parseFloat(document.getElementById('durationInput').value);
+            durationTimeout = setTimeout(() => stopAudio(), duration * 1000);
+
+            drawOscilloscope();
+        }
+
+        function generateNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const whiteNoise = audioContext.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
 
             gainNode = audioContext.createGain();
             gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            whiteNoise.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioContext.destination);
 
-            oscillator.start();
-
-            const duration = parseFloat(document.getElementById('durationInput').value);
-            durationTimeout = setTimeout(() => stopAudio(), duration * 1000);
+            whiteNoise.start();
+            oscillator = whiteNoise; // So that stopAudio can stop it
         }
 
         function startAudioIndefinitely() {
@@ -124,19 +187,36 @@
             clearTimeout(durationTimeout);
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
 
-            oscillator = audioContext.createOscillator();
-            oscillator.type = document.getElementById('waveformSelect').value;
-            oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
+            const waveform = document.getElementById('waveformSelect').value;
 
-            gainNode = audioContext.createGain();
-            gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+            if (waveform === 'noise') {
+                generateNoise();
+            } else {
+                oscillator = audioContext.createOscillator();
+                oscillator.type = waveform === 'pulse' ? 'square' : waveform;
+                oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+                gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
 
-            oscillator.start();
-            // 不设置超时，以永久播放，直到手动停止
+                if (waveform === 'pulse') {
+                    const pulseWidth = 0.5; // Adjust or make dynamic
+                    gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value) * pulseWidth, audioContext.currentTime);
+                } else if (waveform === 'ramp') {
+                    oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
+                }
+
+                oscillator.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioContext.destination);
+
+                oscillator.start();
+            }
+
+            drawOscilloscope();
         }
 
         function stopAudio() {
@@ -148,10 +228,12 @@
                 audioContext.close();
             }
             clearTimeout(durationTimeout);
+            cancelAnimationFrame(animationId);
+            clearCanvas();
         }
 
         function updateFrequency(value) {
-            if (oscillator) {
+            if (oscillator && oscillator.frequency) {
                 oscillator.frequency.setValueAtTime(value, audioContext.currentTime);
             }
         }
@@ -165,8 +247,82 @@
 
         function updateWaveform(value) {
             if (oscillator) {
-                oscillator.type = value;
+                oscillator.type = value === 'pulse' ? 'square' : value;
+                
+                // Adjust gain for different waveforms
+                let gain = 1;
+                switch(value) {
+                    case 'sine':
+                        gain = 4.5;
+                        break;
+                    case 'square':
+                        gain = 0.5;
+                        break;
+                    case 'sawtooth':
+                        gain = 0.5;
+                        break;
+                    case 'triangle':
+                        gain = 0.2;
+                        break;
+                    case 'pulse':
+                        gain = 0.2;
+                        break;
+                    case 'ramp':
+                        gain = 0.2;
+                        break;
+                    case 'noise':
+                        gain = 0.2;
+                        break;
+                }
+                
+                if (gainNode) {
+                    gainNode.gain.setValueAtTime(gain * parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+                }
             }
+        }
+
+        function drawOscilloscope() {
+            const bufferLength = analyser.fftSize;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                animationId = requestAnimationFrame(draw);
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                canvasContext.fillStyle = '#f5f5f5';
+                canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+
+                canvasContext.lineWidth = 2;
+                canvasContext.strokeStyle = '#333';
+
+                canvasContext.beginPath();
+
+                const sliceWidth = canvas.width * 1.0 / bufferLength;
+                let x = 0;
+
+                for(let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+
+                    if(i === 0) {
+                        canvasContext.moveTo(x, y);
+                    } else {
+                        canvasContext.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
+                }
+
+                canvasContext.lineTo(canvas.width, canvas.height / 2);
+                canvasContext.stroke();
+            }
+
+            draw();
+        }
+
+        function clearCanvas() {
+            canvasContext.clearRect(0, 0, canvas.width, canvas.height);
         }
     </script>
 </body>
