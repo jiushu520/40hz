@@ -18,6 +18,7 @@
         .container {
             width: 100%;
             max-width: 600px;
+            position: relative;
         }
 
         h1 {
@@ -69,6 +70,29 @@
             width: 100%;
             height: 200px;
         }
+
+        /* Tooltip styles */
+        .tooltip {
+            display: none;
+            position: absolute;
+            left: 0;
+            transform: translateY(5px); /* Move tooltip just below the input */
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            width: 100%;
+            max-width: 600px;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-top: 5px;
+        }
+
+        .tooltip p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -80,15 +104,18 @@
         
         <label for="waveformSelect">波形: </label>
         <select id="waveformSelect" onchange="updateWaveform(this.value)">
+            <option value="custom">公式</option>
             <option value="sine">Sine</option>
             <option value="triangle">Triangle</option>
             <option value="square">Square</option>
             <option value="sawtooth">Sawtooth</option>
             <option value="pulse">Pulse</option>
             <option value="noise">Noise</option>
-            <option value="ramp">Ramp</option>
         </select>
-        
+
+        <label for="customFormulaInput" id="formulaLabel" style="display:none;">输入公式: </label>
+        <input type="text" id="customFormulaInput" style="display:none;" placeholder="sin(x * Math.PI)" onkeypress="handleKeyPress(event)" onclick="toggleTooltip()">
+
         <label for="volumeSlider">音量: <span id="volumeValue">0.5</span></label>
         <input type="range" id="volumeSlider" min="0" max="1" value="0.5" step="0.01" onchange="updateVolume(this.value)">
         <canvas id="oscilloscope"></canvas>
@@ -99,6 +126,18 @@
         <button onclick="startAudio()">播放</button>
         <button onclick="startAudioIndefinitely()">连续播放</button>
         <button onclick="stopAudio()">停止</button>
+
+        <!-- Tooltip container -->
+        <div id="tooltip" class="tooltip">
+            <p><strong>正弦波：</strong><br>Math.sin(2 * Math.PI * x)</p>
+            <p><strong>平方波：</strong><br>Math.sign(Math.sin(2 * Math.PI * x))</p>
+            <p><strong>三角波：</strong><br>Math.asin(Math.sin(2 * Math.PI * x)) * (2 / Math.PI)</p>
+            <p><strong>锯齿波：</strong><br>2 * (x % 1) - 1</p>
+            <p><strong>白噪声：</strong><br>Math.random() * 2 - 1</p>
+            <p><strong>脉冲波：</strong><br>(Math.sin(2 * Math.PI * x) > 0.5 ? 1 : -1)</p>
+            <p><strong>指数衰减波：</strong><br>Math.sin(2 * Math.PI * x) * Math.exp(-3 * x)</p>
+            <p><strong>正弦包络的噪声：</strong><br>Math.sin(2 * Math.PI * x) * (Math.random() * 2 - 1)</p>
+        </div>
     </div>
 
     <script>
@@ -113,6 +152,8 @@
         window.onload = function() {
             canvas = document.getElementById('oscilloscope');
             canvasContext = canvas.getContext('2d');
+            // 自动触发一次更新，以确保公式选项显示输入框
+            updateWaveform(document.getElementById('waveformSelect').value);
             startAudioIndefinitely();  // 页面加载时自动播放
         };
 
@@ -126,55 +167,60 @@
 
             const waveform = document.getElementById('waveformSelect').value;
 
-            let gainCoefficient = 1;
-            switch(waveform) {
-                case 'sine':
-                    gainCoefficient = 5.0; // 正弦波的系数
-                    break;
-                case 'square':
-                    gainCoefficient = 0.5; // 方波的系数
-                    break;
-                case 'sawtooth':
-                    gainCoefficient = 0.5; // 锯齿波的系数
-                    break;
-                case 'triangle':
-                    gainCoefficient = 0.7; // 三角波的系数
-                    break;
-                case 'pulse':
-                    gainCoefficient = 0.3; // 脉冲波的系数
-                    break;
-                case 'ramp':
-                    gainCoefficient = 0.4; // 斜波的系数
-                    break;
-                case 'noise':
-                    gainCoefficient = 0.2; // 噪声波的系数
-                    break;
-            }
-
-            if (waveform === 'noise') {
-                generateNoise(gainCoefficient);
+            if (waveform === 'custom') {
+                const formula = document.getElementById('customFormulaInput').value;
+                generateCustomWaveform(formula);
             } else {
-                oscillator = audioContext.createOscillator();
-                oscillator.type = waveform === 'pulse' ? 'square' : waveform;
-                oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
-
-                gainNode = audioContext.createGain();
-                const adjustedGain = gainCoefficient * parseFloat(document.getElementById('volumeSlider').value);
-                gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
-
-                if (waveform === 'pulse') {
-                    const pulseWidth = 0.5; // This can be adjusted or made dynamic
-                    oscillator.type = 'square';
-                    gainNode.gain.setValueAtTime(adjustedGain * pulseWidth, audioContext.currentTime);
-                } else if (waveform === 'ramp') {
-                    oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
+                let gainCoefficient = 1;
+                switch(waveform) {
+                    case 'sine':
+                        gainCoefficient = 5.0; // 正弦波的系数
+                        break;
+                    case 'square':
+                        gainCoefficient = 0.5; // 方波的系数
+                        break;
+                    case 'sawtooth':
+                        gainCoefficient = 0.5; // 锯齿波的系数
+                        break;
+                    case 'triangle':
+                        gainCoefficient = 0.7; // 三角波的系数
+                        break;
+                    case 'pulse':
+                        gainCoefficient = 0.3; // 脉冲波的系数
+                        break;
+                    case 'ramp':
+                        gainCoefficient = 0.4; // 斜波的系数
+                        break;
+                    case 'noise':
+                        gainCoefficient = 0.2; // 噪声波的系数
+                        break;
                 }
 
-                oscillator.connect(gainNode);
-                gainNode.connect(analyser);
-                analyser.connect(audioContext.destination);
+                if (waveform === 'noise') {
+                    generateNoise(gainCoefficient);
+                } else {
+                    oscillator = audioContext.createOscillator();
+                    oscillator.type = waveform === 'pulse' ? 'square' : waveform;
+                    oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
 
-                oscillator.start();
+                    gainNode = audioContext.createGain();
+                    const adjustedGain = gainCoefficient * parseFloat(document.getElementById('volumeSlider').value);
+                    gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
+
+                    if (waveform === 'pulse') {
+                        const pulseWidth = 0.5; // This can be adjusted or made dynamic
+                        oscillator.type = 'square';
+                        gainNode.gain.setValueAtTime(adjustedGain * pulseWidth, audioContext.currentTime);
+                    } else if (waveform === 'ramp') {
+                        oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
+                    }
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(analyser);
+                    analyser.connect(audioContext.destination);
+
+                    oscillator.start();
+                }
             }
 
             const duration = parseFloat(document.getElementById('durationInput').value);
@@ -206,6 +252,36 @@
 
             whiteNoise.start();
             oscillator = whiteNoise; // So that stopAudio can stop it
+        }
+
+        function generateCustomWaveform(formula) {
+            const sampleRate = audioContext.sampleRate;
+            const bufferSize = sampleRate;
+            const buffer = audioContext.createBuffer(1, bufferSize, sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                const x = i / sampleRate;
+                try {
+                    data[i] = eval(formula.replace(/x/g, x)); // 替换公式中的x并计算值
+                } catch (e) {
+                    data[i] = 0; // 如果公式有错误，返回0
+                }
+            }
+
+            const customOscillator = audioContext.createBufferSource();
+            customOscillator.buffer = buffer;
+            customOscillator.loop = true;
+
+            gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+
+            customOscillator.connect(gainNode);
+            gainNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            customOscillator.start();
+            oscillator = customOscillator; // 为了使stopAudio能正确停止
         }
 
         function startAudioIndefinitely() {
@@ -243,7 +319,10 @@
                     break;
             }
 
-            if (waveform === 'noise') {
+            if (waveform === 'custom') {
+                const formula = document.getElementById('customFormulaInput').value;
+                generateCustomWaveform(formula);
+            } else if (waveform === 'noise') {
                 generateNoise(gainCoefficient);
             } else {
                 oscillator = audioContext.createOscillator();
@@ -275,6 +354,7 @@
             if (oscillator) {
                 oscillator.stop();
                 oscillator.disconnect();
+                oscillator = null; // 确保振荡器清除
             }
             if (audioContext) {
                 audioContext.close();
@@ -327,15 +407,32 @@
         }
 
         function updateWaveform(value) {
-            if (oscillator) {
-                oscillator.type = value === 'pulse' ? 'square' : value;
+            stopAudio(); // 在切换波形时停止当前的振荡器，确保清除自定义波形
 
-                if (value === 'ramp') {
-                    oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
-                }
+            if (value === 'custom') {
+                document.getElementById('formulaLabel').style.display = 'block';
+                document.getElementById('customFormulaInput').style.display = 'block';
+            } else {
+                document.getElementById('formulaLabel').style.display = 'none';
+                document.getElementById('customFormulaInput').style.display = 'none';
             }
 
-            updateVolume(document.getElementById('volumeSlider').value);
+            startAudio(); // 重新启动振荡器以生成新的波形
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                startAudio();
+            }
+        }
+
+        function toggleTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            const inputField = document.getElementById('customFormulaInput');
+            const inputFieldRect = inputField.getBoundingClientRect();
+
+            tooltip.style.top = inputFieldRect.bottom + 'px';
+            tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
         }
 
         function drawOscilloscope() {
