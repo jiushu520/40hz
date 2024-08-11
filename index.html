@@ -126,21 +126,46 @@
 
             const waveform = document.getElementById('waveformSelect').value;
 
+            let gainCoefficient = 1;
+            switch(waveform) {
+                case 'sine':
+                    gainCoefficient = 5.0; // 正弦波的系数
+                    break;
+                case 'square':
+                    gainCoefficient = 0.5; // 方波的系数
+                    break;
+                case 'sawtooth':
+                    gainCoefficient = 0.5; // 锯齿波的系数
+                    break;
+                case 'triangle':
+                    gainCoefficient = 0.7; // 三角波的系数
+                    break;
+                case 'pulse':
+                    gainCoefficient = 0.3; // 脉冲波的系数
+                    break;
+                case 'ramp':
+                    gainCoefficient = 0.4; // 斜波的系数
+                    break;
+                case 'noise':
+                    gainCoefficient = 0.2; // 噪声波的系数
+                    break;
+            }
+
             if (waveform === 'noise') {
-                generateNoise();
+                generateNoise(gainCoefficient);
             } else {
                 oscillator = audioContext.createOscillator();
                 oscillator.type = waveform === 'pulse' ? 'square' : waveform;
                 oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
 
                 gainNode = audioContext.createGain();
-                gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+                const adjustedGain = gainCoefficient * parseFloat(document.getElementById('volumeSlider').value);
+                gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
 
                 if (waveform === 'pulse') {
-                    // Handle Pulse wave (square wave with adjustable duty cycle)
                     const pulseWidth = 0.5; // This can be adjusted or made dynamic
                     oscillator.type = 'square';
-                    gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value) * pulseWidth, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(adjustedGain * pulseWidth, audioContext.currentTime);
                 } else if (waveform === 'ramp') {
                     oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
                 }
@@ -158,7 +183,7 @@
             drawOscilloscope();
         }
 
-        function generateNoise() {
+        function generateNoise(gainCoefficient) {
             const bufferSize = 2 * audioContext.sampleRate;
             const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
             const output = noiseBuffer.getChannelData(0);
@@ -172,7 +197,8 @@
             whiteNoise.loop = true;
 
             gainNode = audioContext.createGain();
-            gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+            const adjustedGain = gainCoefficient * parseFloat(document.getElementById('volumeSlider').value);
+            gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
 
             whiteNoise.connect(gainNode);
             gainNode.connect(analyser);
@@ -192,19 +218,45 @@
 
             const waveform = document.getElementById('waveformSelect').value;
 
+            let gainCoefficient = 1;
+            switch(waveform) {
+                case 'sine':
+                    gainCoefficient = 5.0;
+                    break;
+                case 'square':
+                    gainCoefficient = 0.5;
+                    break;
+                case 'sawtooth':
+                    gainCoefficient = 0.5;
+                    break;
+                case 'triangle':
+                    gainCoefficient = 0.7;
+                    break;
+                case 'pulse':
+                    gainCoefficient = 0.3;
+                    break;
+                case 'ramp':
+                    gainCoefficient = 0.4;
+                    break;
+                case 'noise':
+                    gainCoefficient = 0.2;
+                    break;
+            }
+
             if (waveform === 'noise') {
-                generateNoise();
+                generateNoise(gainCoefficient);
             } else {
                 oscillator = audioContext.createOscillator();
                 oscillator.type = waveform === 'pulse' ? 'square' : waveform;
                 oscillator.frequency.setValueAtTime(parseFloat(document.getElementById('frequencyInput').value), audioContext.currentTime);
 
                 gainNode = audioContext.createGain();
-                gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+                const adjustedGain = gainCoefficient * parseFloat(document.getElementById('volumeSlider').value);
+                gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
 
                 if (waveform === 'pulse') {
-                    const pulseWidth = 0.5; // Adjust or make dynamic
-                    gainNode.gain.setValueAtTime(parseFloat(document.getElementById('volumeSlider').value) * pulseWidth, audioContext.currentTime);
+                    const pulseWidth = 0.5;
+                    gainNode.gain.setValueAtTime(adjustedGain * pulseWidth, audioContext.currentTime);
                 } else if (waveform === 'ramp') {
                     oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
                 }
@@ -240,45 +292,50 @@
 
         function updateVolume(value) {
             if (gainNode) {
-                gainNode.gain.setValueAtTime(value, audioContext.currentTime);
+                const waveform = document.getElementById('waveformSelect').value;
+                
+                let gainCoefficient = 1;
+                switch(waveform) {
+                    case 'sine':
+                        gainCoefficient = 5.0;
+                        break;
+                    case 'square':
+                        gainCoefficient = 0.5;
+                        break;
+                    case 'sawtooth':
+                        gainCoefficient = 0.5;
+                        break;
+                    case 'triangle':
+                        gainCoefficient = 0.7;
+                        break;
+                    case 'pulse':
+                        gainCoefficient = 0.3;
+                        break;
+                    case 'ramp':
+                        gainCoefficient = 0.4;
+                        break;
+                    case 'noise':
+                        gainCoefficient = 0.2;
+                        break;
+                }
+
+                const adjustedGain = gainCoefficient * parseFloat(value);
+                gainNode.gain.setValueAtTime(adjustedGain, audioContext.currentTime);
             }
+
             document.getElementById("volumeValue").innerText = value;
         }
 
         function updateWaveform(value) {
             if (oscillator) {
                 oscillator.type = value === 'pulse' ? 'square' : value;
-                
-                // Adjust gain for different waveforms
-                let gain = 1;
-                switch(value) {
-                    case 'sine':
-                        gain = 4.5;
-                        break;
-                    case 'square':
-                        gain = 0.5;
-                        break;
-                    case 'sawtooth':
-                        gain = 0.5;
-                        break;
-                    case 'triangle':
-                        gain = 0.2;
-                        break;
-                    case 'pulse':
-                        gain = 0.2;
-                        break;
-                    case 'ramp':
-                        gain = 0.2;
-                        break;
-                    case 'noise':
-                        gain = 0.2;
-                        break;
-                }
-                
-                if (gainNode) {
-                    gainNode.gain.setValueAtTime(gain * parseFloat(document.getElementById('volumeSlider').value), audioContext.currentTime);
+
+                if (value === 'ramp') {
+                    oscillator.frequency.linearRampToValueAtTime(parseFloat(document.getElementById('frequencyInput').value) * 2, audioContext.currentTime + 0.1);
                 }
             }
+
+            updateVolume(document.getElementById('volumeSlider').value);
         }
 
         function drawOscilloscope() {
