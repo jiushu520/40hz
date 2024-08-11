@@ -75,6 +75,7 @@
         .tooltip {
             display: none;
             position: absolute;
+             top: 100%;  /* 修改为在输入框下面显示 */
             left: 0;
             transform: translateY(5px); /* Move tooltip just below the input */
             background-color: #fff;
@@ -464,14 +465,20 @@ function updateWaveform(value) {
             }
         }
 
-        function toggleTooltip() {
-            const tooltip = document.getElementById('tooltip');
-            const inputField = document.getElementById('customFormulaInput');
-            const inputFieldRect = inputField.getBoundingClientRect();
+function toggleTooltip() {
+    const tooltip = document.getElementById('tooltip');
+    const inputField = document.getElementById('customFormulaInput');
+    const inputFieldRect = inputField.getBoundingClientRect();
 
-            tooltip.style.top = inputFieldRect.bottom + 'px';
-            tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
-        }
+    // 如果输入框太靠下，可以在上方显示
+    if (window.innerHeight - inputFieldRect.bottom < tooltip.offsetHeight) {
+        tooltip.style.top = (inputFieldRect.top - tooltip.offsetHeight) + 'px';
+    } else {
+        tooltip.style.top = inputFieldRect.bottom + 'px';
+    }
+    tooltip.style.left = inputFieldRect.left + 'px';
+    tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
+}
 
         function drawOscilloscope() {
             const bufferLength = analyser.fftSize;
