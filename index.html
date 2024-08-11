@@ -128,16 +128,20 @@
         <button onclick="stopAudio()">停止</button>
 
         <!-- Tooltip container -->
-        <div id="tooltip" class="tooltip">
-            <p><strong>正弦波：</strong><br>Math.sin(2 * Math.PI * x)</p>
-            <p><strong>平方波：</strong><br>Math.sign(Math.sin(2 * Math.PI * x))</p>
-            <p><strong>三角波：</strong><br>Math.asin(Math.sin(2 * Math.PI * x)) * (2 / Math.PI)</p>
-            <p><strong>锯齿波：</strong><br>2 * (x % 1) - 1</p>
-            <p><strong>白噪声：</strong><br>Math.random() * 2 - 1</p>
-            <p><strong>脉冲波：</strong><br>(Math.sin(2 * Math.PI * x) > 0.5 ? 1 : -1)</p>
-            <p><strong>指数衰减波：</strong><br>Math.sin(2 * Math.PI * x) * Math.exp(-3 * x)</p>
-            <p><strong>正弦包络的噪声：</strong><br>Math.sin(2 * Math.PI * x) * (Math.random() * 2 - 1)</p>
-        </div>
+<div id="tooltip" class="tooltip">
+    <button onclick="closeTooltip()" style="float: right; background-color: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer;">关闭</button>
+    正弦波叠加:Math.sin(2 * Math.PI * 220 * x) + Math.sin(2 * Math.PI * 440 * x)<br>
+    渐进正弦波:Math.sin(2 * Math.PI * (200 + 100 * x) * x)<br>
+    脉冲波调制的平静音:Math.sin(2 * Math.PI * 220 * x) * Math.sin(2 * Math.PI * 2 * x)<br>
+    低频噪声调制:Math.sin(2 * Math.PI * 220 * x) * (Math.random() * 0.1)<br>
+    和谐波音调:Math.sin(2 * Math.PI * 220 * x) + Math.sin(2 * Math.PI * 330 * x) + Math.sin(2 * Math.PI * 440 * x)<br>
+
+    正弦波：Math.sin(2 * Math.PI * x)<br>
+    平方波：Math.sign(Math.sin(2 * Math.PI * x))<br>
+    三角波：Math.asin(Math.sin(2 * Math.PI * x)) * (2 / Math.PI)<br>
+    锯齿波：2 * (x % 1) - 1<br>
+</div>
+
     </div>
 
     <script>
@@ -406,19 +410,28 @@
             document.getElementById("volumeValue").innerText = value;
         }
 
-        function updateWaveform(value) {
-            stopAudio(); // 在切换波形时停止当前的振荡器，确保清除自定义波形
+function updateWaveform(value) {
+    stopAudio(); // 在切换波形时停止当前的振荡器，确保清除自定义波形
 
-            if (value === 'custom') {
-                document.getElementById('formulaLabel').style.display = 'block';
-                document.getElementById('customFormulaInput').style.display = 'block';
-            } else {
-                document.getElementById('formulaLabel').style.display = 'none';
-                document.getElementById('customFormulaInput').style.display = 'none';
-            }
+    if (value === 'custom') {
+        document.getElementById('formulaLabel').style.display = 'block';
+        document.getElementById('customFormulaInput').style.display = 'block';
+    } else {
+        document.getElementById('formulaLabel').style.display = 'none';
+        document.getElementById('customFormulaInput').style.display = 'none';
 
-            startAudio(); // 重新启动振荡器以生成新的波形
+        // 如果提示窗口是打开的，选择除公式以外的波形时关闭它
+        const tooltip = document.getElementById('tooltip');
+        if (tooltip.style.display === 'block') {
+            tooltip.style.display = 'none';
         }
+    }
+
+    startAudio(); // 重新启动振荡器以生成新的波形
+}
+
+
+
 
         function handleKeyPress(event) {
             if (event.key === 'Enter') {
@@ -478,6 +491,13 @@
         function clearCanvas() {
             canvasContext.clearRect(0, 0, canvas.width, canvas.height);
         }
+
+function closeTooltip() {
+    document.getElementById('tooltip').style.display = 'none';
+}
+
+
+
     </script>
 </body>
 </html>
