@@ -112,6 +112,22 @@
             <option value="pulse">Pulse</option>
             <option value="noise">Noise</option>
         </select>
+<label for="presetFormulaSelect">选择预设公式: </label>
+<select id="presetFormulaSelect" onchange="selectPresetFormula(this.value)">
+    <option value="">选择一个公式</option>
+    <option value="Math.sin(2 * Math.PI * 220 * x) + Math.sin(2 * Math.PI * 440 * x)">正弦波叠加</option>
+    <option value="Math.sin(2 * Math.PI * (200 + 100 * x) * x)">渐进正弦波</option>
+    <option value="Math.sin(2 * Math.PI * 220 * x) * Math.sin(2 * Math.PI * 2 * x)">脉冲波调制的平静音</option>
+    <option value="Math.sin(2 * Math.PI * 220 * x) * (Math.random() * 0.1)">低频噪声调制</option>
+    <option value="Math.sin(2 * Math.PI * 220 * x) + Math.sin(2 * Math.PI * 330 * x) + Math.sin(2 * Math.PI * 440 * x)">和谐波音调</option>
+    <option value="Math.sin(2 * Math.PI * x)">正弦波</option>
+    <option value="Math.sign(Math.sin(2 * Math.PI * x))">平方波</option>
+    <option value="Math.asin(Math.sin(2 * Math.PI * x)) * (2 / Math.PI)">三角波</option>
+    <option value="2 * (x % 1) - 1">锯齿波</option>
+</select>
+
+
+
 
         <label for="customFormulaInput" id="formulaLabel" style="display:none;">输入公式: </label>
         <input type="text" id="customFormulaInput" style="display:none;" placeholder="sin(x * Math.PI)" onkeypress="handleKeyPress(event)" onclick="toggleTooltip()">
@@ -496,6 +512,12 @@ function closeTooltip() {
     document.getElementById('tooltip').style.display = 'none';
 }
 
+function selectPresetFormula(formula) {
+    if (formula !== "") {
+        document.getElementById('customFormulaInput').value = formula;
+        startAudio();  // 播放所选公式的音频
+    }
+}
 
 
     </script>
