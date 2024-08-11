@@ -73,23 +73,21 @@
 
         /* Tooltip styles */
         .tooltip {
-            display: none;
-            position: absolute;
-             top: 100%;  /* 修改为在输入框下面显示 */
-            left: 0;
-            transform: translateY(5px); /* Move tooltip just below the input */
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 15px;
-            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            width: 100%;
-            max-width: 600px;
-            font-size: 14px;
-            line-height: 1.5;
-            margin-top: 5px;
+    display: none;
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    width: 100%;
+    max-width: 600px;
+    font-size: 14px;
+    line-height: 1.5;
         }
+
+
 
         .tooltip p {
             margin: 5px 0;
@@ -125,12 +123,11 @@
     <option value="Math.sign(Math.sin(2 * Math.PI * x))">平方波</option>
     <option value="Math.asin(Math.sin(2 * Math.PI * x)) * (2 / Math.PI)">三角波</option>
     <option value="2 * (x % 1) - 1">锯齿波</option>
-    <option value="Math.sin(2 * Math.PI * 110 * x) * Math.exp(-x)">逐渐消失的低频正弦波</option>
+
     <option value="Math.sin(2 * Math.PI * 110 * x) * Math.sin(2 * Math.PI * 0.5 * x)">呼吸节奏波</option>
     <option value="Math.sin(2 * Math.PI * 60 * x) + Math.sin(2 * Math.PI * 80 * x)">低频双正弦波</option>
     <option value="Math.sin(2 * Math.PI * 50 * x) * Math.sin(2 * Math.PI * 0.1 * x)">心跳节奏波</option>
     <option value="Math.sin(2 * Math.PI * 40 * x) + Math.sin(2 * Math.PI * 42 * x)">微微差频波</option>
-    <option value="Math.sin(2 * Math.PI * 55 * x) * Math.exp(-0.0005 * x) * Math.cos(2 * Math.PI * 0.1 * x)">渐变的低频正弦波</option>
     <option value="Math.sin(2 * Math.PI * 30 * x) * (Math.random() * 0.5 + 0.5)">柔和的低频噪声调制</option>
     <option value="Math.sin(2 * Math.PI * 75 * x) + Math.sin(2 * Math.PI * 79 * x) * Math.sin(2 * Math.PI * 0.2 * x)">深度放松波</option>
 </select>
@@ -470,15 +467,23 @@ function toggleTooltip() {
     const inputField = document.getElementById('customFormulaInput');
     const inputFieldRect = inputField.getBoundingClientRect();
 
-    // 如果输入框太靠下，可以在上方显示
-    if (window.innerHeight - inputFieldRect.bottom < tooltip.offsetHeight) {
-        tooltip.style.top = (inputFieldRect.top - tooltip.offsetHeight) + 'px';
-    } else {
-        tooltip.style.top = inputFieldRect.bottom + 'px';
-    }
+    // 默认将 tooltip 显示在输入框下方
+    tooltip.style.top = (inputFieldRect.bottom + window.scrollY) + 'px';
     tooltip.style.left = inputFieldRect.left + 'px';
+
+    // 如果窗口底部的空间不足以显示 tooltip，则将其显示在输入框上方
+    if (window.innerHeight - inputFieldRect.bottom < tooltip.offsetHeight) {
+        tooltip.style.top = (inputFieldRect.top - tooltip.offsetHeight + window.scrollY) + 'px';
+    }
+
     tooltip.style.display = tooltip.style.display === 'block' ? 'none' : 'block';
 }
+
+
+
+
+
+
 
         function drawOscilloscope() {
             const bufferLength = analyser.fftSize;
