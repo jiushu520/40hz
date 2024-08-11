@@ -176,13 +176,20 @@
         let canvas, canvasContext;
         let animationId;
 
-        window.onload = function() {
-            canvas = document.getElementById('oscilloscope');
-            canvasContext = canvas.getContext('2d');
-            // 自动触发一次更新，以确保公式选项显示输入框
-            updateWaveform(document.getElementById('waveformSelect').value);
-            startAudioIndefinitely();  // 页面加载时自动播放
-        };
+window.onload = function() {
+    canvas = document.getElementById('oscilloscope');
+    canvasContext = canvas.getContext('2d');
+
+    // 选择预设的深度放松波公式
+    document.getElementById('waveformSelect').value = 'custom';
+    document.getElementById('presetFormulaSelect').value = "Math.sin(2 * Math.PI * 75 * x) + Math.sin(2 * Math.PI * 79 * x) * Math.sin(2 * Math.PI * 0.2 * x)";
+    selectPresetFormula(document.getElementById('presetFormulaSelect').value);
+    
+    // 自动播放音频
+    startAudioIndefinitely();
+};
+
+
 
         function startAudio() {
             stopAudio(); // Stop any existing audio
